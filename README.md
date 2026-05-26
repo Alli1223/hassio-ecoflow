@@ -23,7 +23,7 @@ Two methods are available, and you can choose one or the other.
 Once installed, after restarting Home Assistant, you can start integration as usual from Add Integration.
 
 ## Supported products
-- ~~RIVER Mini~~ (Coming soon)
+- RIVER Mini
 - RIVER Max
 - RIVER Pro
   - Extra Battery

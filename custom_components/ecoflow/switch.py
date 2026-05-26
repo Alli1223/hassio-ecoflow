@@ -18,6 +18,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         entities.extend([
             AcEntity(client, client.inverter, "ac_out_state", "AC output"),
             BeepEntity(client, client.pd, "beep", "Beep"),
+            XBoostEntity(client, client.inverter,
+                         "ac_out_xboost", "AC X-Boost"),
         ])
         if is_delta(client.product):
             entities.extend([
@@ -40,10 +42,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     AmbientSyncEntity(client, client.bms.pipe(
                         select_bms(1)), "ambient_mode", "Ambient light sync screen", 1)
                 ])
-        if not is_river_mini(client.product):
+        if is_river_mini(client.product):
             entities.extend([
-                XBoostEntity(client, client.inverter,
-                             "ac_out_xboost", "AC X-Boost"),
+                AcSlowChargeEntity(client, client.inverter,
+                                   "ac_in_slow", "AC slow charging"),
+                DcEntity(client, client.pd, "car_out_state", "DC output"),
+                UsbEntity(client, client.pd, "usb_out1_state", "USB output"),
             ])
 
     async_add_entities(entities)
@@ -135,6 +139,16 @@ class DcEntity(SimpleEntity):
 
     async def async_turn_on(self, **kwargs: Any):
         self._client.tcp.write(send.set_dc_out(self._client.product, True))
+
+
+class UsbEntity(SimpleEntity):
+    _attr_device_class = SwitchDeviceClass.OUTLET
+
+    async def async_turn_off(self, **kwargs: Any):
+        self._client.tcp.write(send.set_usb(False))
+
+    async def async_turn_on(self, **kwargs: Any):
+        self._client.tcp.write(send.set_usb(True))
 
 
 class FanAutoEntity(SimpleEntity):

@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import (DOMAIN, EcoFlowConfigEntity, EcoFlowEntity, HassioEcoFlowClient,
                request)
-from .ecoflow import is_delta, is_power_station, is_river, send
+from .ecoflow import is_delta, is_power_station, is_river, is_river_mini, send
 
 _AC_OPTIONS = {
     "Never": 0,
@@ -78,6 +78,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             entities.extend([
                 DcInTypeEntity(client),
                 LcdTimeoutPollEntity(client, "lcd_timeout", "Screen timeout"),
+            ])
+        if is_river_mini(client.product):
+            entities.extend([
+                LcdTimeoutPushEntity(client, client.pd,
+                                     "lcd_timeout", "Screen timeout"),
             ])
 
     async_add_entities(entities)

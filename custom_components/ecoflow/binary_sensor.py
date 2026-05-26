@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import (DOMAIN, EcoFlowBaseEntity, EcoFlowEntity, HassioEcoFlowClient,
                select_bms)
-from .ecoflow import is_delta, is_power_station, is_river
+from .ecoflow import is_delta, is_power_station, is_river, is_river_mini
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
@@ -39,6 +39,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                     1), ops.share()), "battery_error", "Extra status", 1),
                 InputEntity(client, client.inverter, "in_type", "Input"),
             ])
+        if is_river_mini(client.product):
+            entities.extend([
+                InputEntity(client, client.inverter, "in_type", "Input"),
+            ])
 
     async_add_entities(entities)
 
@@ -64,6 +68,9 @@ class ChargingEntity(BinarySensorEntity, EcoFlowBaseEntity):
         await super().async_added_to_hass()
         self._subscribe(self._client.pd, self.__updated)
         self._subscribe(self._client.ems, self.__updated)
+        if is_river_mini(self._client.product):
+            # River Mini sends battery_level_max via inverter, not ems.
+            self._subscribe(self._client.inverter, self.__updated)
 
     def __updated(self, data: dict[str, Any]):
         self._attr_available = True

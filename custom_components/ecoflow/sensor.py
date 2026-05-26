@@ -17,7 +17,7 @@ from reactivex import Observable
 
 from . import DOMAIN, EcoFlowEntity, HassioEcoFlowClient, select_bms
 from .ecoflow import (is_delta, is_delta_mini, is_delta_pro, is_power_station,
-                      is_river)
+                      is_river, is_river_mini)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
@@ -54,11 +54,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                         "ac_consumption", "AC output + loss", real=True),
             WattsEntity(client, client.inverter, "ac_out_power",
                         "AC output", real=False),
-            WattsEntity(client, client.pd, "usb_out1_power",
-                        "USB-A left output"),
-            WattsEntity(client, client.pd, "usb_out2_power",
-                        "USB-A right output"),
         ])
+        if is_river_mini(client.product):
+            entities.append(
+                WattsEntity(client, client.pd, "usb_out1_power",
+                            "USB-A output"),
+            )
+        else:
+            entities.extend([
+                WattsEntity(client, client.pd, "usb_out1_power",
+                            "USB-A left output"),
+                WattsEntity(client, client.pd, "usb_out2_power",
+                            "USB-A right output"),
+            ])
         if is_delta(client.product):
             bms = (
                 client.bms.pipe(select_bms(0), ops.share()),
@@ -167,6 +175,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                             "USB-Fast output"),
                 WattsEntity(client, client.pd, "typec_out1_power",
                             "USB-C output"),
+            ])
+        if is_river_mini(client.product):
+            # River Mini has no separate EMS or MPPT module: battery and DC-in
+            # values ride along on the inverter packet (see parse_inverter_river_mini).
+            entities.extend([
+                CurrentEntity(client, client.inverter, "dc_in_current",
+                              "DC input current"),
+                CyclesEntity(client, client.inverter, "battery_cycles",
+                             "Battery cycles"),
+                TempEntity(client, client.inverter, "ac_in_temp",
+                           "AC input temperature"),
+                TempEntity(client, client.inverter, "ac_out_temp",
+                           "AC output temperature"),
+                TempEntity(client, client.inverter, "battery_main_temp",
+                           "Battery temperature"),
+                TempEntity(client, client.pd, "car_out_temp",
+                           "Car output temperature"),
+                VoltageEntity(client, client.inverter, "dc_in_voltage",
+                              "DC input voltage"),
+                VoltageEntity(client, client.inverter, "battery_main_voltage",
+                              "Battery voltage"),
+                WattsEntity(client, client.pd, "car_out_power", "Car output"),
             ])
 
     async_add_entities(entities)

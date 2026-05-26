@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import (DOMAIN, EcoFlowConfigEntity, EcoFlowEntity, HassioEcoFlowClient,
                request)
 from .ecoflow import (is_delta, is_delta_max, is_delta_mini, is_delta_pro,
-                      is_power_station, send)
+                      is_power_station, is_river_mini, send)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
@@ -21,9 +21,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         entities.extend([
             DcInCurrentEntity(client, "dc_in_current_config",
                               "Car input"),
-            MaxLevelEntity(client, client.ems,
-                           "battery_level_max", "Charge level"),
         ])
+        if is_river_mini(client.product):
+            # River Mini publishes battery_level_max via the inverter packet
+            # because it doesn't send a separate EMS packet.
+            entities.append(
+                MaxLevelEntity(client, client.inverter,
+                               "battery_level_max", "Charge level"),
+            )
+        else:
+            entities.append(
+                MaxLevelEntity(client, client.ems,
+                               "battery_level_max", "Charge level"),
+            )
         if is_delta(client.product):
             entities.extend([
                 ChargeWattsEntity(client, client.inverter,
